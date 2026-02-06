@@ -21,12 +21,31 @@ class Webhook {
                 timestamp: msg.timestamp,
                 type: msg.type,
                 hasMedia: msg.hasMedia,
-                isStatus: msg.isStatus
+                isStatus: msg.isStatus,
+                isForwarded: msg.isForwarded,
+                isPtt: msg.isPtt,
+                duration: msg.duration
             };
 
-            // If it's media, the user might want more info, 
-            // but for now we send the basic message data.
-            // Downloading media can be resource-intensive.
+            if (msg.hasMedia) {
+                logger.info(`Downloading media for message ${msg.id._serialized}...`);
+                try {
+                    // Sometimes a tiny delay helps the client fetch the media assets
+                    const media = await msg.downloadMedia();
+                    if (media) {
+                        logger.info(`Media downloaded successfully (${media.mimetype})`);
+                        payload.media = {
+                            mimetype: media.mimetype,
+                            data: media.data,
+                            filename: media.filename
+                        };
+                    } else {
+                        logger.warn(`Media download returned empty for ${msg.id._serialized}`);
+                    }
+                } catch (err) {
+                    logger.error(err, `Failed to download media for ${msg.id._serialized}`);
+                }
+            }
 
             await axios.post(this.url, payload);
             logger.info(`Forwarded message ${msg.id._serialized} to webhook`);

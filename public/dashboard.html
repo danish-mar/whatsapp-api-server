@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp API - Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00a884;
+            --bg: #0b141a;
+            --sidebar-bg: #111b21;
+            --chat-bg: #0b141a;
+            --header-bg: #202c33;
+            --message-in: #202c33;
+            --message-out: #005c4b;
+            --text: #e9edef;
+            --text-muted: #8696a0;
+            --input-bg: #2a3942;
+            --accent: #3b82f6;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 350px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 1rem 1.5rem;
+            background-color: var(--header-bg);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+
+        .status-dot.online {
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message-form {
+            background: var(--header-bg);
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .message-form h3 {
+            margin: 0 0 1rem 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .input-group {
+            margin-bottom: 1rem;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--input-bg);
+            border: 1px solid transparent;
+            border-radius: 0.5rem;
+            color: var(--text);
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        /* Main Chat Area */
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--chat-bg);
+        }
+
+        .chat-header {
+            padding: 1rem 2rem;
+            background: var(--header-bg);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png');
+            background-blend-mode: overlay;
+            background-color: rgba(11, 20, 26, 0.95);
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            position: relative;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+
+        .message.in {
+            align-self: flex-start;
+            background: var(--message-in);
+            border-bottom-left-radius: 0;
+        }
+
+        .message.out {
+            align-self: flex-end;
+            background: var(--message-out);
+            border-bottom-right-radius: 0;
+        }
+
+        .message-info {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .message-from {
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.25rem;
+            font-size: 0.8rem;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="status-badge">
+                <div id="status-dot" class="status-dot"></div>
+                <span id="status-text">Connecting...</span>
+            </div>
+            <button id="logout-btn" style="width: auto; padding: 0.4rem 0.8rem; background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); font-size: 0.8rem;">Logout</button>
+        </div>
+        
+        <div class="sidebar-content">
+            <div class="message-form">
+                <h3>Send Message</h3>
+                <div class="input-group">
+                    <input type="text" id="target-phone" placeholder="Phone (e.g. 1234567890)">
+                </div>
+                <div class="input-group">
+                    <textarea id="message-body" rows="3" placeholder="Type a message..."></textarea>
+                </div>
+                <button id="send-btn">Send Now</button>
+                <div id="send-status" style="margin-top: 0.5rem; font-size: 0.8rem; text-align: center;"></div>
+            </div>
+
+            <div style="padding: 1rem;">
+                <h4 style="color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase;">Recent Activity</h4>
+                <div id="activity-log" style="font-size: 0.85rem; color: var(--text-muted);">
+                    Waiting for events...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            <h2 style="margin: 0; font-size: 1.2rem;">Live Messages</h2>
+        </div>
+        <div class="chat-messages" id="chat-container">
+            <!-- Messages will appear here -->
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const chatContainer = document.getElementById('chat-container');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const activityLog = document.getElementById('activity-log');
+
+        // Auth Check
+        async function checkAuth() {
+            const res = await fetch('/api/session');
+            const data = await res.json();
+            if (!data.authenticated) {
+                window.location.href = '/index.html';
+            }
+        }
+        checkAuth();
+
+        document.getElementById('logout-btn').onclick = async () => {
+            await fetch('/api/logout');
+            window.location.href = '/index.html';
+        };
+
+        // Socket Events
+        socket.on('connect', () => {
+            logActivity('Connected to server');
+        });
+
+        socket.on('status_change', (status) => {
+            updateStatusUI(status);
+        });
+
+        socket.on('new_message', (msg) => {
+            addMessage(msg, 'in');
+            logActivity(`New message from ${msg.from}`);
+        });
+
+        // UI Handlers
+        document.getElementById('send-btn').onclick = async () => {
+            const to = document.getElementById('target-phone').value;
+            const message = document.getElementById('message-body').value;
+            const statusDiv = document.getElementById('send-status');
+
+            if (!to || !message) return;
+
+            statusDiv.textContent = 'Sending...';
+            statusDiv.style.color = 'var(--text-muted)';
+
+            try {
+                // Using the existing API but we need to pass the key or use session?
+                // For now, let's assume the session is enough or add a session-based proxy
+                const res = await fetch('/send-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ to, message })
+                });
+
+                if (res.ok) {
+                    addMessage({ from: 'You', body: message, timestamp: Math.floor(Date.now()/1000) }, 'out');
+                    document.getElementById('message-body').value = '';
+                    statusDiv.textContent = 'Message sent!';
+                    statusDiv.style.color = 'var(--primary)';
+                } else {
+                    statusDiv.textContent = 'Error sending message';
+                    statusDiv.style.color = '#ff5e5e';
+                }
+            } catch (err) {
+                statusDiv.textContent = 'Network error';
+            }
+        };
+
+        function addMessage(msg, type) {
+            const div = document.createElement('div');
+            div.className = `message ${type}`;
+            
+            const time = new Date(msg.timestamp * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            div.innerHTML = `
+                ${type === 'in' ? `<div class="message-from">${msg.from}</div>` : ''}
+                <div class="message-body">${msg.body}</div>
+                <div class="message-info">
+                    <span>${time}</span>
+                </div>
+            `;
+            
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function logActivity(text) {
+            const div = document.createElement('div');
+            div.style.marginBottom = '0.5rem';
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
+            activityLog.prepend(div);
+        }
+
+        function updateStatusUI(status) {
+            if (status.ready) {
+                statusDot.className = 'status-dot online';
+                statusText.textContent = 'WhatsApp Ready';
+                logActivity('WhatsApp Client is Ready');
+            } else if (status.state) {
+                logActivity(`System State: ${status.state}`);
+            } else if (status.loading) {
+                statusDot.className = 'status-dot';
+                statusDot.style.background = '#eab308'; // Yellow
+                statusText.textContent = `Syncing (${status.percent}%)`;
+                logActivity(`WhatsApp Syncing: ${status.message}`);
+            } else if (status.authenticated) {
+                statusDot.className = 'status-dot';
+                statusDot.style.background = '#3b82f6'; // Blue
+                statusText.textContent = 'Authenticated...';
+                logActivity('WhatsApp Authenticated, waiting for ready event...');
+            } else if (status.qr) {
+                statusDot.className = 'status-dot';
+                statusDot.style.background = '#ef4444';
+                statusText.textContent = 'QR Code Required';
+                logActivity('QR Code refresh detected. Check server console.');
+            } else {
+                statusDot.className = 'status-dot';
+                statusDot.style.background = '#ef4444';
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Fetch initial status
+        fetch('/status')
+            .then(res => res.json())
+            .then(updateStatusUI);
+    </script>
+</body>
+</html>

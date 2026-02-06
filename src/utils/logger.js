@@ -14,20 +14,20 @@ class Logger {
         });
     }
 
-    info(message, ...args) {
-        this.logger.info(message, ...args);
+    info(obj, ...args) {
+        this.logger.info(obj, ...args);
     }
 
-    error(message, ...args) {
-        this.logger.error(message, ...args);
+    error(obj, ...args) {
+        this.logger.error(obj, ...args);
     }
 
-    warn(message, ...args) {
-        this.logger.warn(message, ...args);
+    warn(obj, ...args) {
+        this.logger.warn(obj, ...args);
     }
 
-    debug(message, ...args) {
-        this.logger.debug(message, ...args);
+    debug(obj, ...args) {
+        this.logger.debug(obj, ...args);
     }
 }
 

@@ -9,7 +9,7 @@ const authMiddleware = (req, res, next) => {
         return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    if (providedPassword === password) {
+    if ((providedPassword === password) || (req.session && req.session.authenticated)) {
         return next();
     }
 
