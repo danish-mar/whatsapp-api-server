@@ -146,62 +146,134 @@
   </head>
   <body>
     <div class="login-card">
-      <div class="logo">📱</div>
-      <h1>Welcome Back</h1>
-      <p>Enter your API password to continue</p>
-
-      <form id="login-form">
-        <div class="input-group">
-          <label for="password">API Password</label>
-          <input
-            type="password"
-            id="password"
-            placeholder="••••••••"
-            required
-          />
+        <div class="logo">📱</div>
+        <h1 id="main-title">WhatsApp API</h1>
+        
+        <div id="qr-container" style="display: none; margin-bottom: 1.5rem;">
+            <p>Scan this QR code to link your account</p>
+            <div style="background: white; padding: 1rem; border-radius: 1rem; display: inline-block; margin-bottom: 1rem;">
+                <img id="qr-image" style="display: block; width: 200px; height: 200px;">
+            </div>
+            <p id="qr-status" style="font-size: 0.8rem;">Waiting for QR...</p>
         </div>
-        <button type="submit">Unlock Dashboard</button>
+
+        <div id="login-container">
+            <p>Enter your API password to continue</p>
+            <form id="login-form">
+                <div class="input-group">
+                    <label for="password">API Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit">Unlock Dashboard</button>
+            </form>
+        </div>
         <div id="error-msg"></div>
-      </form>
     </div>
 
     <script>
-      const form = document.getElementById("login-form");
-      const errorMsg = document.getElementById("error-msg");
+        const form = document.getElementById('login-form');
+        const errorMsg = document.getElementById('error-msg');
+        const loginContainer = document.getElementById('login-container');
+        const qrContainer = document.getElementById('qr-container');
+        const qrImage = document.getElementById('qr-image');
+        const qrStatus = document.getElementById('qr-status');
+        const mainTitle = document.getElementById('main-title');
 
-      // Check if already authenticated
-      fetch("/api/session")
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.authenticated) {
-            window.location.href = "/dashboard.html";
-          }
-        });
+        let isCheckingQR = false;
 
-      form.onsubmit = async (e) => {
-        e.preventDefault();
-        const password = document.getElementById("password").value;
+        async function checkStatus() {
+            try {
+                // Check session
+                const sessionRes = await fetch('/api/session');
+                const sessionData = await sessionRes.json();
+                
+                if (sessionData.authenticated) {
+                    // If authenticated, check WhatsApp status
+                    const statusRes = await fetch('/status');
+                    const statusData = await statusRes.json();
+                    
+                    if (statusData.ready) {
+                        window.location.href = '/dashboard.html';
+                        return;
+                    }
 
-        errorMsg.textContent = "";
-
-        try {
-          const res = await fetch("/api/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ password }),
-          });
-
-          const data = await res.json();
-
-          if (data.success) {
-            window.location.href = "/dashboard.html";
-          } else {
-            errorMsg.textContent = "Invalid password. Please try again.";
-          }
-        } catch (err) {
-          errorMsg.textContent = "Connection error. Check server.";
+                    // Show QR if not ready
+                    if (statusData.qrCode) {
+                        showQR();
+                    } else if (statusData.authenticated) {
+                        loginContainer.style.display = 'none';
+                        qrContainer.style.display = 'block';
+                        qrImage.style.display = 'none';
+                        qrStatus.textContent = 'WhatsApp is syncing... please wait.';
+                    } else {
+                        qrContainer.style.display = 'none';
+                        loginContainer.style.display = 'block';
+                    }
+                } else {
+                    // Not authenticated, show login form
+                    qrContainer.style.display = 'none';
+                    loginContainer.style.display = 'block';
+                    mainTitle.textContent = 'WhatsApp API';
+                }
+            } catch (err) {
+                console.error('Status check failed', err);
+                errorMsg.textContent = 'Connection error. Check server.';
+                qrContainer.style.display = 'none';
+                loginContainer.style.display = 'block';
+                mainTitle.textContent = 'WhatsApp API';
+            }
         }
-      };
+
+        async function showQR() {
+            loginContainer.style.display = 'none';
+            qrContainer.style.display = 'block';
+            mainTitle.textContent = 'Link WhatsApp';
+            
+            try {
+                const res = await fetch('/api/qr');
+                const data = await res.json();
+                if (data.qr) {
+                    qrImage.src = data.qr;
+                    qrImage.style.display = 'block';
+                    qrStatus.textContent = 'Scan me with your phone';
+                } else {
+                    qrImage.style.display = 'none';
+                    qrStatus.textContent = 'No QR code available. Waiting...';
+                }
+            } catch (err) {
+                qrImage.style.display = 'none';
+                qrStatus.textContent = 'Failed to load QR';
+            }
+        }
+
+        // Run status check every 3 seconds
+        setInterval(checkStatus, 3000);
+        checkStatus(); // Initial check
+
+        form.onsubmit = async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            
+            errorMsg.textContent = '';
+            
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                const data = await res.json();
+                
+                if (data.success) {
+                    checkStatus(); // Immediate check after login
+                } else {
+                    errorMsg.textContent = 'Invalid password. Please try again.';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Connection error. Check server.';
+            }
+        };
     </script>
   </body>
 </html>

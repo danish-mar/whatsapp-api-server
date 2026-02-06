@@ -63,6 +63,22 @@ class App {
             res.json({ authenticated: !!req.session.authenticated });
         });
 
+        // QR Code Endpoint
+        this.app.get('/api/qr', async (req, res) => {
+            const status = whatsapp.getStatus();
+            if (status.qrCode) {
+                try {
+                    const QRCode = require('qrcode');
+                    const qrImage = await QRCode.toDataURL(status.qrCode);
+                    return res.json({ qr: qrImage });
+                } catch (err) {
+                    res.status(500).json({ error: 'Failed to generate QR code image' });
+                }
+            } else {
+                res.json({ qr: null, ready: status.ready });
+            }
+        });
+
         // Web UI Middleware
         const webAuth = (req, res, next) => {
             if (req.session.authenticated) {
